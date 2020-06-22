@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+	<title>下拉框三级联动</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- bootstrap -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+	<script src="https://cdn.bootcss.com/vue/2.6.8/vue.js"></script>
+	
+	<style type="text/css">
+		[v-clock]{
+			display: none
+		}
+	</style>
+</head>
+<body>
+	<div class="row">
+		<div style="height: 260px"></div>
+		<div class="col-md-3"></div>
+		<div class="col-md-6">
+			<div id="test">
+			    单位：
+			    <select v-model="L1_selected">
+			        <option v-for="item in L1" :value="item.id">{[item.name]}</option>
+			    </select>
+			    部门：
+			    <select v-model="L2_selected">
+			        <option v-for="item in L2" :value="item.id">{[item.name]}</option>
+			    </select>
+			    用户：
+			    <select v-model="L3_selected">
+			        <option v-for="item in L3" :value="item.id">{[item.name]}</option>
+			    </select>
+			</div>
+		</div>
+	</div>
+
+
+	<script type="text/javascript">
+		var D1 = [
+		    {name:"大豆",id:"1"},
+		    {name:"豆油",id:"2"},
+		    {name:"豆粕",id:"3"},		    
+		];
+		var D2 = [
+		    {name:"供给",id:"1",pid:'1'},
+		    {name:"需求",id:"2",pid:'1'},
+		    {name:"库存",id:"3",pid:'2'},
+		    {name:"指标",id:"4",pid:'2'},
+		    {name:"价格",id:"5",pid:'3'}		    
+		];
+		var D3 = [
+		    {name:"供给量",id:"1",pid:'1'},
+		    {name:"产量",id:"2",pid:'1'},
+		    {name:"进口量",id:"3",pid:'1'},
+		    {name:"需求量",id:"4",pid:'2'},
+		    {name:"出口量",id:"5",pid:'2'},
+		    {name:"期初库存",id:"6",pid:'3'},
+		    {name:"期末库存",id:"7",pid:'3'},
+		    {name:"库消比",id:"8",pid:'4'},
+		    {name:"基差",id:"9",pid:'4'},
+		    {name:"DCE价格",id:"10",pid:'5'},
+		    {name:"CBOT价格",id:"11",pid:'5'},
+		    {name:"现货价格",id:"12",pid:'5'}
+		]
+		var vm = new Vue({
+			delimiters: ['{[', ']}'],
+		    el:"#test",
+		    data:{
+		        L1_selected:"",
+		        L1:[],
+		        L2_selected:"",
+		        L2:[],
+		        L3_selected:"",
+		        L3:[]
+		    },
+
+		    created:function () {
+		        this.L1 = D1;
+		        this.L1_selected = this.L1.length>0 ? this.L1[0].id : "";
+		        
+		        var val = this.L1_selected
+		        this.L2 = D2.filter(function (x){ return x.pid == val })
+		        this.L2_selected = this.L2.length>0 ? this.L2[0].id : "";
+
+		        var val = this.L2_selected;
+		        this.L3 = D3.filter(function (x){ return x.pid == val })
+		        this.L3_selected = this.L3.length>0 ? this.L3[0].id : "";
+		    },
+		    watch:{
+		    	L1_selected:function (val) {
+		            this.L2 = D2.filter(function (x){ return x.pid == val});
+		            this.L2_selected = this.L2.length>0 ? this.L2[0].id : "";
+		        },
+		        L2_selected:function (val) {
+		            this.L3 = D3.filter(function (x){ return x.pid == val});
+		            this.L3_selected = this.L3.length>0 ? this.L3[0].id : "";
+		        }
+		    }
+		});
+	</script>
+
+</body>
+</html>

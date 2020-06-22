@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<!-- <meta http-equiv="refresh" content="10"> -->
+		<meta charset="utf-8">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+		<script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+		<link href="https://cdn.bootcss.com/bootstrap-switch/4.0.0-alpha.1/css/bootstrap-switch.min.css" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css?family=Raleway:400,300,700" rel="stylesheet" type="text/css">
+		<link rel="stylesheet" type="text/css" href="stylesheets/demo.css" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/ns-default.css" />
+		<link rel="stylesheet" type="text/css" href="stylesheets/ns-style-growl.css" />
+		<script src="javascripts/modernizr.custom.js"></script>
+		<script src="https://cdn.bootcss.com/bootstrap-switch/4.0.0-alpha.1/js/bootstrap-switch.min.js"></script>
+		<title></title>
+	</head>
+	<script type="text/javascript">
+		var casenum ="<div align='center'><strong><span>案件编号</span></strong></div>"
+		var zdstate ="<div align='center'><strong><span>自动流程状态</span></strong></div>"
+		var createTime ="<div align='center'><strong><span>案件同步时间 </span></strong><a href='javascript:void(0);' onclick='createtimedown()' ><span class='glyphicon glyphicon-menu-down' name='createtime_down'></span></a></div>"
+		var createTimeup ="<div align='center'><strong><span>案件同步时间 </span></strong><a href='javascript:void(0);' onclick='createtimedown()' ><span class='glyphicon glyphicon-menu-up' name='createtime_down'></span></a></div>"
+		var expectendtime ="<div align='center'><strong><span>部门自动回复时间 </span></strong><a href='javascript:void(0);' onclick='autotimedown()' ><span class='glyphicon glyphicon-menu-down' name='autotime_down'></span></a></span></strong></div>"
+		var expectendtimeup ="<div align='center'><strong><span>部门自动回复时间 </span></strong><a href='javascript:void(0);' onclick='autotimedown()' ><span class='glyphicon glyphicon-menu-up' name='autotime_down'></span></a></span></strong></div>"
+		var hechatime = "<div align='center'><strong><span>预计核查完成时间</span></strong></div>"
+		var nbstate ="<div align='center'><strong><span>宁波系统状态</span></strong></div>"
+		var isManual ="<div align='center'><strong><span>操作</span></strong></div>"
+		var zhuangtai = "<div align='center'><strong><span>状态</span></strong></div>"
+		var account = "<div align='center'><strong><span>操作人</span></strong></div>"
+		var departname = "<div align='center'><strong><span>批转部门</span></strong></div>"
+		var beforeStatus = "<div align='center'><strong><span>介入前状态</span></strong></div>"
+		var afterStatus = "<div align='center'><strong><span>恢复后状态</span></strong></div>"
+		var casestate = '初始化'
+		var createtimeMark = ""
+		var autotimeMark   = ""
+		// create the notification
+		function newAlert(a){
+			var notification = new NotificationFx({
+			message : '<p>'+a+'</p>',
+			layout : 'growl',
+			effect : 'genie',
+			type : 'success', // notice, warning, error or success
+			onClose : function() {
+				}
+			});
+		
+		// show the notification
+			notification.show()
+		}
+		function getnewstr(str,char){
+			var num = str.lastIndexOf(char)
+			var newstr = str.substring(num)
+			return newstr
+		}
+		function getCharCount(str,char){
+			var regex = new RegExp(char, 'g'); // 使用g表示整个字符串都要匹配
+			var result = str.match(regex);          //match方法可在字符串内检索指定的值，或找到一个或多个正则表达式的匹配。
+			var count=!result ? 0 : result.length;
+			return count;
+		} 
+		function jieruRecover(querytasknum){
+			let result = confirm("是否确定重启案件,编号为: "+querytasknum)
+			if(result == true){
+				$.ajax({
+					type: "post",
+					url: "/jieruRecover",
+					dataType: "json",
+					data:{
+						tasknum:querytasknum,
+					},
+					success:function(data){
+						newAlert("案件重启成功")
+						//location.reload()
+					},
+					error:function(error){
+						console.log(error)
+					}
+				}) 
+			}
+		}
+		function jieru(querytasknum){
+			let result = confirm("是否确定介入案件,编号为: "+querytasknum)
+			if(result == true){
+				$.ajax({
+					type: "post",
+					url: "/jieru",
+					dataType: "json",
+					data:{
+						tasknum:querytasknum,
+					},
+					success:function(data){
+						newAlert("案件介入成功")
+						//location.reload()
+					},
+					error:function(error){
+						console.log(error)
+					}
+				}) 
+			}
+		}
+		function getstep(arr,querytasknum){
+			let step1 = "在区受理阶段登记案件"
+			let step2 = "在区受理阶段批转区派遣"
+			let step3 = "在区派遣阶段批转区直部门"
+			let step4 = "在区直部门阶段批转区核查结案"
+			let step5 = "在区核查结案阶段发送核查发送核查"
+			let step6 = "在区核查结案阶段核查反馈"
+			let step7 = "在区核查结案阶段批转市结案审核"
+			let step8 = "在市结案审核阶段结案"
+			let step9 = "在市不立案审核阶段作废"
+			if(arr.indexOf(step8) !== -1){
+				$("#"+querytasknum).html('已结案')
+				let a = '已结案'
+				return a 
+			}else if(arr.indexOf(step7) !== -1){
+				$("#"+querytasknum).html('核查信息已通过，进入结案阶段')
+				let a = '核查信息已通过，进入结案阶段'
+				return a 
+			}else if(arr.indexOf(step6) !== -1){
+				$("#"+querytasknum).html('核查反馈已处理')
+				let a = '核查反馈已处理'
+				return a 
+			}else if(arr.indexOf(step5) !== -1){
+				$("#"+querytasknum).html('已发送核查信息')
+				let a = '已发送核查信息'
+				return a 
+			}else if(arr.indexOf(step4) !== -1){
+				$("#"+querytasknum).html('部门回复已完成')
+				let a = '部门回复已完成'
+				return a 
+			}else if(arr.indexOf(step3) !== -1){
+				$("#"+querytasknum).html('已批转，等待部门回复')
+				let a = '已批转，等待部门回复'
+				return a 
+			}else if(arr.indexOf(step2) !== -1){
+				$("#"+querytasknum).html('已选择立案')
+				let a = '已选择立案'
+				return a 
+			}else if(arr.indexOf(step1) !== -1){
+				$("#"+querytasknum).html('已加入数据库')
+				let a = '已加入数据库'
+				return a 
+			}else if(arr.indexOf(step9) !== -1){
+				$("#"+querytasknum).html('作废')
+				let a = '作废'
+				return a 
+			}
+			else{
+				$("#"+querytasknum).html('其他状态，需要查询确认')
+				let a = '其他状态，需要查询确认'
+				return a 
+			}
+		}
+		function getdetail(querytasknum){
+			$.ajax({
+				type: "get",
+				//url: "//172.19.48.181:3000/detail/" + aa,
+				url: "//172.19.48.181:3000/detail/"+querytasknum,
+				async: false,
+				dataType: "json",
+				success:function(data){
+					//console.log(data)
+					let a = 2020
+					let arr = data.case[0].processInfo
+					let newarr = getnewstr(arr,a)
+					let result = getstep(newarr,querytasknum)
+					$.ajax({
+						type:"post",
+						url:"/updateNB",
+						async:false,
+						dataType: "json",
+						data:{
+							tasknum:querytasknum,
+							nbStatus:result
+						},
+						success:function(data){
+							console.log(data)
+						},
+						error:function(error){
+							console.log(error)
+						}
+					})
+				},
+				error:function(error){
+					console.log(error)
+					newAlert("查询失败，请稍后再试")
+				}
+			}) 
+		}
+		//每1分钟更新主体函数
+		function timetochange(){
+			let pageid = $("#pageid").html()
+			let tp = pageid -1
+			$.ajax({
+				type:"get",
+				url:"/casestateQuerycount",
+				dataType:"json",
+				success:function(data){
+					var x = data
+					x = JSON.stringify(x)
+					var a = x.match(/\d+/);
+					$("#datasnum").html(a);
+					var b = Math.ceil(a / 10)
+					if(b == 0){
+						b = 1
+					}
+					$("#totalpage").html(b);
+					totalpage = b ;
+				},
+				error:function(error){
+					console.log(error)
+				}
+			})
+			$.ajax({
+				type:"post",
+				url:"/casestateQuerychange",
+				dataType:"json",
+				data:{
+					createtimeMark:createtimeMark,
+					autotimeMark:autotimeMark,
+					tp:tp
+				},
+				success:function(data){
+					let arr = data
+					var strHtml = '';
+					let  nowtime = Math.round(new Date() / 1000)
+					strHtml += '<tr>';
+					strHtml += '<td width="100px">' + casenum+ '</td>'
+					strHtml += '<td width="100px">' + account+ '</td>'
+					if(createtimeMark == "createtimeMark_up"){
+						strHtml += '<td width="150px">' + createTimeup+ '</td>'
+					}else{
+						strHtml += '<td width="150px">' + createTime+ '</td>'
+					}
+					strHtml += '<td width="200px">' + zdstate+ '</td>'
+					strHtml += '<td width="150px">' + departname+ '</td>'
+					if(autotimeMark == "autotimeMark_up" ){
+						strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+					}else{
+						strHtml += '<td width="150px">' + expectendtime+ '</td>'
+					}
+					strHtml += '<td width="150px">' + hechatime+ '</td>'
+					strHtml += '<td width="200px">' + nbstate + '</td>'
+					strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+					strHtml += '<td width="250px">' + isManual + '</td>'
+					strHtml += '</tr>';
+					//td
+					for (var i = 0; i < arr.length; i++) {
+					    var item = arr[i];
+					    strHtml += '<tr>';
+						let nextpartstart
+						let departAccount = item.departAccount
+						let humanaccount = item.account
+						let departName = item.departName
+						let nbStatus = item.nbStatus
+						let querytasknum  = item.tasknum
+					    let state = item.state
+						let nextpartstartstamp = item.nextpartstart
+						let endtimehalfstamp = item.endtimehalf
+						let isnormal = item.isnormal
+						let isnow = item.isnow
+						let islocked = item.islocked
+						let createtimestamp = item.createtime
+						let Numcreatetime = timestampToTime(createtimestamp)
+						let newquerytasknum = "0" + querytasknum 
+						let newendtimehalfstamp = +endtimehalfstamp +60
+						if(endtimehalfstamp !== null ){
+							endtimehalf = timestampToTime(endtimehalfstamp)	
+						}else{
+							endtimehalf = "未批转到部门"
+						}
+						if(nextpartstartstamp !== null ){
+							nextpartstart = timestampToTime(nextpartstartstamp)	
+						}else{
+							nextpartstart = "未发送核查"
+						}
+					    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+						strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+						strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+						strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+						strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+						strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+						strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+					    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+					    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+						var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+						var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+						var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+						var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+						var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+						var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+						var jieru  ="<a href='javascript:void(0);' onclick='jieru(" + querytasknum + ")' ><button  id='xx1'>介入</button></a>"
+						var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+						strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+						if(isnormal == 0 || islocked == "Y"){
+							strHtml += '<td>'+yichang1+'</td>'
+						}else if(isnormal == 2 || isnormal == 3){
+							if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+								strHtml += '<td>'+chaoshihecha+'</td>'
+							}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+								strHtml += '<td>'+chaoshihuifu+'</td>'
+							}else{
+								strHtml +='<td>'+zhengchang+'</td>'
+							}
+						}
+					    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+						strHtml += '</tr>';
+					}
+					$('#tab').html(strHtml);
+				},
+				error:function(error){}
+			})
+		}
+		//每1分钟执行函数
+		var t1 = window.setInterval("timetochange()",60000);
+		function timestampToTime(timestamp) {
+		        var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+		        Y = date.getFullYear() + '-';
+		        M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+				D = date.getDate()
+		        h = date.getHours() 
+		        m = date.getMinutes() 
+		        s = date.getSeconds()
+				if (D >= 0 && D <= 9) {
+					D = "0" + D;
+				}
+				if (h >= 0 && h <= 9) {
+					h = "0" + h;
+				}
+				if (m >= 0 && m <= 9) {
+					m = "0" + m;
+				}
+				if (s >= 0 && s <= 9) {
+					s = "0" + s;
+				}
+				
+		        return Y+M+D+ ' '+h+':'+m+':'+s;
+		}
+	//查询暂停还是启动
+	$(document).ready(function(){
+		$.ajax({
+			type:"get",
+			url:"/findstopmark",
+			dataType:"json",
+			success:function(data){
+				let x = data.mainmark
+				console.log(x)
+				if(x == "go"){
+					$("#false").hide();
+					//alert("go")
+				}else{
+					$("#success").hide();
+					//alert("stop")
+				}
+			}
+		})
+	})
+	//介入数据列表
+	$(document).ready(function(){
+		$.ajax({
+			type:"get",
+			url:"/findbyjieru",
+			dataType:"json",
+			success:function(data){
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td >' + casenum+ '</td>'
+				strHtml += '<td >' + account+ '</td>'
+				strHtml += '<td >' + departname+ '</td>'
+				strHtml += '<td >' + beforeStatus+ '</td>'
+				strHtml += '<td >' + afterStatus+ '</td>'
+				strHtml += '<td >' + isManual + '</td>'
+				strHtml += '</tr>';
+				
+				for (var i = 0; i < arr.length; i++) {
+					var item = arr[i]
+					strHtml += '<tr>';
+					let humanaccount = item.account
+					let departName = item.departName
+					let querytasknum  = item.tasknum
+					let oldStatus = item.oldStatus
+					let newStatus = item.newStatus
+					let  chongqi  ="<a href='javascript:void(0);' onclick='jieruRecover(" + querytasknum + ")' ><button  id='xx1'>重启</button></a>"
+					strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ oldStatus + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ newStatus + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ chongqi + '</span></div></td>';
+					strHtml += '</tr>';
+				}
+				$('#jierutable').html(strHtml);
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	})
+	
+	//进页面自动获取
+	$(document).ready(function(){
+		$.ajax({
+			type:"get",
+			url:"/casestateQuerycount",
+			dataType:"json",
+			success:function(data){
+				var x = data
+				x = JSON.stringify(x)
+				var a = x.match(/\d+/);
+				$("#datasnum").html(a);
+				var b = Math.ceil(a / 10)
+				if(b == 0){
+									  b = 1
+				}
+				$("#totalpage").html(b);
+				totalpage = b ;
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+		$.ajax({
+			type:"get",
+			url:"/casestateQuery",
+			dataType:"json",
+			success:function(data){
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					var jieru  ="<a href='javascript:void(0);' onclick='jieru(" + querytasknum + ")' ><button  id='xx1'>介入</button></a>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+ jieru +'&nbsp;&nbsp;'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error:function(error){}
+		})
+	})
+//查询
+$(document).ready(function(){
+	$("#query").click(function(){
+		$.ajax({
+			type:"post",
+			url:"/casestateQueryClickcount",
+			dataType:"json",
+			data:{
+				tasknum:$("#tasknum").val(),
+			},
+			success:function(data){
+				var x = data
+				x = JSON.stringify(x)
+				var a = x.match(/\d+/);
+				if (a == 0) {
+				    newAlert("没有相关数据")
+				    window.location.reload();
+				}
+				else{
+				  $("#datasnum").html(a);
+				  var b = Math.ceil(a / 20)
+				  if(b == 0){
+					  b = 1
+				  }
+				  $("#totalpage").html(b);
+				  totalpage = b ;
+				}
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+		$.ajax({
+			type:"post",
+			url:"/casestateQueryClick",
+			dataType:"json",
+			data:{
+				tasknum:$("#tasknum").val(),
+			},
+			success:function(data){
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					//console.log("回复时间:"+endtimehalfstamp)
+					//console.log("新时间:"+newendtimehalfstamp)
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+						
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	})
+})
+//上一页
+var gotolastpage = function() {
+  var pageid = $("#pageid").html()
+  var tp = pageid -2
+  if (pageid == 1) {
+    newAlert("当前是第一页！")
+  } 
+  else {
+    let nextpageid = Number(pageid);
+    var newpageid = nextpageid -1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/goto",
+		dataType: "json",
+		data: {
+			createtimeMark:createtimeMark,
+			autotimeMark:autotimeMark,
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let  nowtime = Math.round(new Date() / 1000)
+			let arr = data
+			var strHtml = '';
+			
+			strHtml += '<tr>';
+			strHtml += '<td width="100px">' + casenum+ '</td>'
+			strHtml += '<td width="100px">' + account+ '</td>'
+			if(createtimeMark == "createtimeMark_down"){
+				strHtml += '<td width="150px">' + createTimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+			}
+			strHtml += '<td width="200px">' + zdstate+ '</td>'
+			strHtml += '<td width="150px">' + departname+ '</td>'
+			if(autotimeMark == "autotimeMark_down" ){
+				strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+			}
+			strHtml += '<td width="150px">' + hechatime+ '</td>'
+			strHtml += '<td width="200px">' + nbstate + '</td>'
+			strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+			strHtml += '<td width="250px">' + isManual + '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let departAccount = item.departAccount
+				let humanaccount = item.account
+				let departName = item.departName
+				let nbStatus = item.nbStatus
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+				let islocked = item.islocked
+				let createtimestamp = item.createtime
+				let Numcreatetime = timestampToTime(createtimestamp)
+				let newquerytasknum = "0" + querytasknum 
+				let newendtimehalfstamp = +endtimehalfstamp +60
+				console.log("回复时间:"+endtimehalfstamp)
+				console.log("新时间:"+newendtimehalfstamp)
+				if(endtimehalfstamp !== null ){
+					endtimehalf = timestampToTime(endtimehalfstamp)	
+				}else{
+					endtimehalf = "未批转到部门"
+				}
+				if(nextpartstartstamp !== null ){
+					nextpartstart = timestampToTime(nextpartstartstamp)	
+				}else{
+					nextpartstart = "未发送核查"
+				}
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+				strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+			    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+			    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+				var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+				var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+				var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+				var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+				if(isnormal == 0 || islocked == "Y"){
+					strHtml += '<td>'+yichang1+'</td>'
+					
+				}else if(isnormal == 2 || isnormal == 3){
+					if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+						strHtml += '<td>'+chaoshihecha+'</td>'
+					}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+						strHtml += '<td>'+chaoshihuifu+'</td>'
+					}else{
+						strHtml +='<td>'+zhengchang+'</td>'
+					}
+				}
+			    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  }
+}
+//下一页
+var gotonextpage = function() {
+  var pageid = $("#pageid").html()
+  var tp = pageid 
+  var zongpageid = $("#totalpage").html()
+  if (pageid == zongpageid) {
+    newAlert("当前是最后一页！")
+  }
+  else {
+    let nextpageid = Number(pageid);
+    var newpageid = nextpageid + 1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/goto",
+		dataType: "json",
+		data: {
+			createtimeMark:createtimeMark,
+			autotimeMark:autotimeMark,
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let  nowtime = Math.round(new Date() / 1000)
+			let arr = data
+			var strHtml = '';
+			console.log(createtimeMark)
+			console.log(autotimeMark)
+			strHtml += '<tr>';
+			strHtml += '<td width="100px">' + casenum+ '</td>'
+			strHtml += '<td width="100px">' + account+ '</td>'
+			if(createtimeMark == "createtimeMark_down"){
+				strHtml += '<td width="150px">' + createTimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+			}
+			strHtml += '<td width="200px">' + zdstate+ '</td>'
+			strHtml += '<td width="150px">' + departname+ '</td>'
+			if(autotimeMark == "autotimeMark_down" ){
+				strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+			}
+			strHtml += '<td width="150px">' + hechatime+ '</td>'
+			strHtml += '<td width="200px">' + nbstate + '</td>'
+			strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+			strHtml += '<td width="250px">' + isManual + '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let departAccount = item.departAccount
+				let humanaccount = item.account
+				let departName = item.departName
+				let nbStatus = item.nbStatus
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+				let islocked = item.islocked
+				let createtimestamp = item.createtime
+				let Numcreatetime = timestampToTime(createtimestamp)
+				let newquerytasknum = "0" + querytasknum 
+				let newendtimehalfstamp = +endtimehalfstamp +60
+				if(endtimehalfstamp !== null ){
+					endtimehalf = timestampToTime(endtimehalfstamp)	
+				}else{
+					endtimehalf = "未批转到部门"
+				}
+				if(nextpartstartstamp !== null ){
+					nextpartstart = timestampToTime(nextpartstartstamp)	
+				}else{
+					nextpartstart = "未发送核查"
+				}
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+				strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+			    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+			    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+				var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+				var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+				var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+				var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+				if(isnormal == 0 || islocked == "Y"){
+					strHtml += '<td>'+yichang1+'</td>'
+					
+				}else if(isnormal == 2 || isnormal == 3){
+					if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+						strHtml += '<td>'+chaoshihecha+'</td>'
+					}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+						strHtml += '<td>'+chaoshihuifu+'</td>'
+					}else{
+						strHtml +='<td>'+zhengchang+'</td>'
+					}
+				}
+			    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  }
+}
+//首页
+var gotofirstpage = function() {
+	var tp = 0
+    var newpageid = 1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/goto",
+		dataType: "json",
+		data: {
+			createtimeMark:createtimeMark,
+			autotimeMark:autotimeMark,
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let  nowtime = Math.round(new Date() / 1000)
+			let arr = data
+			var strHtml = '';
+			
+			strHtml += '<tr>';
+			strHtml += '<td width="100px">' + casenum+ '</td>'
+			strHtml += '<td width="100px">' + account+ '</td>'
+			if(createtimeMark == "createtimeMark_up"){
+				strHtml += '<td width="150px">' + createTimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+			}
+			strHtml += '<td width="200px">' + zdstate+ '</td>'
+			strHtml += '<td width="150px">' + departname+ '</td>'
+			if(autotimeMark == "autotimeMark_up" ){
+				strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+			}else{
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+			}
+			strHtml += '<td width="150px">' + hechatime+ '</td>'
+			strHtml += '<td width="200px">' + nbstate + '</td>'
+			strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+			strHtml += '<td width="250px">' + isManual + '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let departAccount = item.departAccount
+				let humanaccount = item.account
+				let departName = item.departName
+				let nbStatus = item.nbStatus
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+				let islocked = item.islocked
+				let createtimestamp = item.createtime
+				let Numcreatetime = timestampToTime(createtimestamp)
+				let newquerytasknum = "0" + querytasknum 
+				let newendtimehalfstamp = +endtimehalfstamp +60
+				if(endtimehalfstamp !== null ){
+					endtimehalf = timestampToTime(endtimehalfstamp)	
+				}else{
+					endtimehalf = "未批转到部门"
+				}
+				if(nextpartstartstamp !== null ){
+					nextpartstart = timestampToTime(nextpartstartstamp)	
+				}else{
+					nextpartstart = "未发送核查"
+				}
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+				strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+			    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+			    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+				var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+				var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+				var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+				var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+				if(isnormal == 0 || islocked == "Y"){
+					strHtml += '<td>'+yichang1+'</td>'
+					
+				}else if(isnormal == 2 || isnormal == 3){
+					if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+						strHtml += '<td>'+chaoshihecha+'</td>'
+					}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+						strHtml += '<td>'+chaoshihuifu+'</td>'
+					}else{
+						strHtml +='<td>'+zhengchang+'</td>'
+					}
+				}
+			    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  
+}
+//跳转
+var gotojump = function() {
+	var newpageid = $("#tiaozhuanid").val()
+	if (newpageid > totalpage || Number(newpageid) < 1) {
+	  newAlert("请输入正确的页数")
+	} else {
+		var tp = Number(newpageid)-1
+		$("#pageid").html(newpageid)
+		$.ajax({
+			type: "post",
+			url: "/goto",
+			dataType: "json",
+			data: {
+				createtimeMark:createtimeMark,
+				autotimeMark:autotimeMark,
+				tp: tp,
+				tasknum:$("#tasknum").val(),
+			},
+			success: function(data) {
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				if(createtimeMark == "createtimeMark_up"){
+					strHtml += '<td width="150px">' + createTimeup+ '</td>'
+				}else{
+					strHtml += '<td width="150px">' + createTime+ '</td>'
+				}
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				if(autotimeMark == "autotimeMark_up" ){
+					strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+				}else{
+					strHtml += '<td width="150px">' + expectendtime+ '</td>'
+				}
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+						
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error: function(err) {
+				console.log('异常');
+			}
+		})
+	}
+}
+
+function sendcheck(querytasknum){
+	var trueorfalse = confirm("是否确定手动发送核查信息")
+	if(trueorfalse == true){
+		$.ajax({
+			type: "post",
+			url: "/queryCaseStatus",
+			dataType: "json",
+			data:{
+				tasknum:querytasknum
+			},
+			success:function(data){
+				console.log(data)
+				var status = data.data
+				if(status == "案件已上报"){
+					$.ajax({
+						type: "post",
+						url: "/sdsendcheck",
+						dataType: "json",
+						data:{
+							tasknum:querytasknum
+						},
+						success:function(datax){
+							console.log(datax)
+							if(datax.success == true){
+								newAlert("手动发送核查成功")
+							}else{
+								newAlert("手动发送核查失败")
+							}
+						},
+						error:function(error){
+							console.log(error)
+							newAlert("手动发送核查失败")
+						}
+					})
+				}else if(status == "未知"){
+					newAlert("案件状态未知，无法发送核查")
+				}else{
+					newAlert("已发送核查")
+				}
+			},
+			error:function(error){
+				console.log(error)
+				newAlert("操作失败")
+			}
+		}) 
+	}
+}
+//更新案件状态 => 手动
+function shoudong(querytasknum){
+	var person = prompt("请输入操作人姓名")
+	if (person!=null && person!="") {
+	    $.ajax({
+			type: "post",
+			url: "/updateshoudong",
+			dataType: "json",
+			data:{
+				tasknum:querytasknum,
+				person:person
+			},
+			success:function(data){
+				newAlert("案件状态成功更新为手动")
+			},
+			error:function(error){
+				console.log(error)
+			}
+		}) 
+	}else{
+		console.log("不选择删除")
+	}
+	
+	
+}
+function createtimedown(){
+	let classdata = $("[name='createtime_down']").attr('class')
+	let pageid = $("#pageid").html()
+	let tp = pageid -1
+	if(classdata.indexOf('down') !== -1){
+		//降序
+		$.ajax({
+			type: "post",
+			url: "/createtimedown",
+			dataType: "json",
+			data:{
+				tp:tp
+			},
+			success:function(data){
+				createtimeMark = "createtimeMark_down"
+				autotimeMark   = ""
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTimeup+ '</td>'
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+				/* let newclassdata = classdata.replace('down','up')
+				$("[name='createtime_down']").removeClass(classdata)
+				$("[name='createtime_down']").addClass(newclassdata) */
+			},
+			error:function(error){
+				console.log(error)
+			}
+		}) 
+	}else{
+		//升序
+		$.ajax({
+			type: "post",
+			url: "/createtimeup",
+			dataType: "json",
+			data:{
+				tp:tp
+			},
+			success:function(data){
+				createtimeMark = "createtimeMark_up"
+				autotimeMark   = ""
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtime+ '</td>'
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+						
+					}else if(isnormal == 2  || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+				
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	}
+}
+
+function autotimedown(){
+	let classdata = $("[name='autotime_down']").attr('class')
+	let pageid = $("#pageid").html()
+	let tp = pageid -1
+	if(classdata.indexOf('down') !== -1){
+		//降序
+		$.ajax({
+			type: "post",
+			url: "/autotimedown",
+			dataType: "json",
+			data:{
+				tp:tp
+			},
+			success:function(data){
+				autotimeMark   = "autotimeMark_down"
+				createtimeMark = ""
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum+ '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTime+ '</td>'
+				strHtml += '<td width="200px">' + zdstate+ '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtimeup+ '</td>'
+				strHtml += '<td width="150px">' + hechatime+ '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let departAccount = item.departAccount
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+						
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+				
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	}else{
+		//升序
+		$.ajax({
+			type: "post",
+			url: "/autotimeup",
+			dataType: "json",
+			data:{
+				tp:tp
+			},
+			success:function(data){
+				autotimeMark = "autotimeMark_down"
+				createtimeMark = ""
+				let  nowtime = Math.round(new Date() / 1000)
+				let arr = data
+				var strHtml = '';
+				
+				strHtml += '<tr>';
+				strHtml += '<td width="100px">' + casenum + '</td>'
+				strHtml += '<td width="100px">' + account+ '</td>'
+				strHtml += '<td width="150px">' + createTime + '</td>'
+				strHtml += '<td width="200px">' + zdstate + '</td>'
+				strHtml += '<td width="150px">' + departname+ '</td>'
+				strHtml += '<td width="150px">' + expectendtime + '</td>'
+				strHtml += '<td width="150px">' + hechatime + '</td>'
+				strHtml += '<td width="200px">' + nbstate + '</td>'
+				strHtml += '<td width="50px">'  + zhuangtai + '</td>'
+				strHtml += '<td width="250px">' + isManual + '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let humanaccount = item.account
+					let departName = item.departName
+					let nbStatus = item.nbStatus
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+					let islocked = item.islocked
+					let createtimestamp = item.createtime
+					let Numcreatetime = timestampToTime(createtimestamp)
+					let newquerytasknum = "0" + querytasknum 
+					let newendtimehalfstamp = +endtimehalfstamp +60
+					let departAccount = item.departAccount
+					if(endtimehalfstamp !== null ){
+						endtimehalf = timestampToTime(endtimehalfstamp)	
+					}else{
+						endtimehalf = "未批转到部门"
+					}
+					if(nextpartstartstamp !== null ){
+						nextpartstart = timestampToTime(nextpartstartstamp)	
+					}else{
+						nextpartstart = "未发送核查"
+					}
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ humanaccount + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ Numcreatetime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span class = '+ querytasknum+'>'+ state + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ departName + departAccount+'</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ endtimehalf + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ nextpartstart + '</span></div></td>';
+				    //var shoudong  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a></div>"
+				    //var chaxun  ="<div align='center' style='padding-bottom:20px'><a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a></div>"
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+					var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					var sendcheck  ="<a href='javascript:void(0);' onclick='sendcheck(" + querytasknum + ")' ><button  id='xx1'>发送核查</button></a>"
+					var zhengchang  ="<div align='center' style=padding-bottom:2px><span class='label label-success' id = "+newquerytasknum+">正常</span></div>"
+					var yichang1    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">案件异常</span></div>"
+					var chaoshihecha    ="<div align='center' style=padding-bottom:2px><span class='label label-warning' id = "+newquerytasknum+">核查超时</span></div>"
+					var chaoshihuifu    ="<div align='center' style=padding-bottom:2px><span class='label label-danger' id = "+newquerytasknum+">回复超时</span></div>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>'+nbStatus+'</span></div></td>';
+					if(isnormal == 0 || islocked == "Y"){
+						strHtml += '<td>'+yichang1+'</td>'
+						
+					}else if(isnormal == 2 || isnormal == 3){
+						if(nextpartstartstamp !== null && state == "已发送核查信息" && nowtime > nextpartstartstamp){
+							strHtml += '<td>'+chaoshihecha+'</td>'
+						}else if(endtimehalfstamp !== null && state == "已批转，等待部门回复" && nowtime >newendtimehalfstamp){
+							strHtml += '<td>'+chaoshihuifu+'</td>'
+						}else{
+							strHtml +='<td>'+zhengchang+'</td>'
+						}
+					}
+				    strHtml += '<td><div align="center">'+shoudong + '&nbsp;&nbsp;'+sendcheck + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+				
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	}
+}	
+
+		
+	
+</script>
+<body>
+<style type="text/css">
+  .red{
+    color: red;
+  }
+
+  .jiacu{
+    font-weight:bold;
+  }
+
+  a{ text-decoration:none} 
+
+</style>
+<!-- 导航条 -->
+<div id="" class="navbar-collapse collapse" style="text-align: center;">
+<ul class="nav nav-pills" style="display: inline-block;float: none;" >
+  <li class="active"><a href="caseStatus">未完结案件</a></li>
+  <li ><a href="endcase">已完结案件</a></li>
+  <li><a href="shoudongcase">手动干预案件</a></li>
+</ul>
+</div>
+<div align="center" style="margin-top:10px" >
+    <table  style="border-radius: 25px;" >
+      <tr>
+        <td width="300" align="center" >
+			<div class="input-group" >
+			    <input type="text" id="tasknum" class="form-control" placeholder="输入需要查找的案件编号" >
+			    <span class="input-group-btn">
+					<button class="btn btn-default" type="button" id="query">Go</button>
+			    </span>
+			</div><!-- /input-group -->
+			<div id="">
+			</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div align="center" style="margin-top:10px" id="success">
+  	<input  name="status1" type="checkbox" id="btn_checkbox success" checked="checked">
+  </div>
+  <div align="center" style="margin-top:10px" id="false">
+  	<input  name="status2" type="checkbox" id="btn_checkbox danger" >
+  </div>
+<div align="center" style="overflow:scroll;">
+	<table   id="tab" class="table table-striped" style="margin-top: 20px;padding:20px ;width: 1450px;table-layout: fixed;" ></table>
+</div>
+<!-- 底部跳转 -->
+  <table id="foot" align="center" >
+    <tr>
+      <td>     
+        <p class="underlinesed"></p>
+        <span>共 <span id="datasnum" class="jiacu"></span> 条记录</span>
+        <a href="javascript:gotofirstpage()" class="firstpage">首页 </a>
+        <a href="javascript:gotolastpage()" class="lastpage">上一页</a>
+        <a href="javascript:gotonextpage()" class="nextpage">下一页</a>
+        <span>页次: <span class="red" id="pageid">1</span>/
+        <span class="jiacu" id="totalpage"></span>
+        <span class="jiacu">&nbsp;10</span>&nbsp;条&nbsp;记录每页<span></span>
+        <span>跳转到：</span><input type="text" style="width: 25px" id="tiaozhuanid"> 
+        <a href="javascript:gotojump()" class="goto">&nbsp;跳转</a>
+      </td>
+    </tr>
+  </table>
+<div align="center" >
+  <table id="jierutable" class="table table-condensed" style="width: 800px;margin-top: 50px;">
+  	<!-- <tr>
+		<th>案件编号</th>
+		<th>操作人</th>
+		<th>批转部门</th>
+		<th>干预前流程</th>
+		<th>恢复后流程</th>
+		<th>操作</th>
+	</tr>
+  	<tr>
+		<td>Data</td>
+		<td>Data</td>
+		<td>Data</td>
+		<td>Data</td>
+		<td>Data</td>
+		<td>Data</td>
+	</tr> -->
+  </table>
+  </div>
+<script src="javascripts/classie.js"></script>
+<script src="javascripts/notificationFx.js"></script>
+<script>
+    $("[name='status1']").bootstrapSwitch({    //初始化按钮
+          onText:"启动",
+          offText:"暂停",
+          onColor:"success",
+          offColor:"danger",
+          size:"normal",
+          onSwitchChange:function(event,state){
+             if(state==true){
+				let result = confirm("是否确定重新启动")
+				if(result == true){
+					//console.log("重新启动成功")
+					$.ajax({
+						type:"get",
+						url:"/restart",
+						dataType:"json",
+						success:function(data){
+							if(data.success == true){
+								newAlert("重新启动成功")
+								//location.reload();
+							}else{
+								newAlert("重新启动失败，请重试")
+								//location.reload();
+							}
+						}
+					})
+				}else{
+					location.reload();
+				}
+                }else{
+                 let result = confirm("是否确定暂停")
+				 if(result == true){
+				 	$.ajax({
+				 		type:"get",
+				 		url:"/stop",
+				 		dataType:"json",
+				 		success:function(data){
+				 			if(data.success == true){
+				 				newAlert("暂停成功")
+				 				//location.reload();
+				 			}else{
+				 				newAlert("暂停失败，请重试")
+				 				//location.reload();
+				 			}
+				 		}
+				 	})
+					//console.log("暂停成功")
+				 }else{
+				 	location.reload();
+				 }
+                }
+            }
+       });
+	   $("[name='status2']").bootstrapSwitch({    //初始化按钮
+	         onText:"启动",
+	         offText:"暂停",
+	         onColor:"success",
+	         offColor:"danger",
+	         size:"normal",
+			 state:false,
+	         onSwitchChange:function(event,state){
+	            if(state==true){
+	   			let result = confirm("是否确定重新启动")
+	   			if(result == true){
+	   				//console.log("重新启动成功")
+	   				$.ajax({
+	   					type:"get",
+	   					url:"/restart",
+	   					dataType:"json",
+	   					success:function(data){
+	   						if(data.success == true){
+	   							newAlert("重新启动成功")
+	   							//location.reload();
+	   						}else{
+	   							newAlert("重新启动失败，请重试")
+	   							//location.reload();
+	   						}
+	   					}
+	   				})
+	   			}else{
+	   				location.reload();
+	   			}
+	               }else{
+	                let result = confirm("是否确定暂停")
+	   			 if(result == true){
+	   			 	$.ajax({
+	   			 		type:"get",
+	   			 		url:"/stop",
+	   			 		dataType:"json",
+	   			 		success:function(data){
+	   			 			if(data.success == true){
+	   			 				newAlert("暂停成功")
+	   			 				//location.reload();
+	   			 			}else{
+	   			 				newAlert("暂停失败，请重试")
+	   			 				//location.reload();
+	   			 			}
+	   			 		}
+	   			 	})
+	   				//console.log("暂停成功")
+	   			 }else{
+	   			 	location.reload();
+	   			 }
+	               }
+	           }
+	      });
+</script>
+  
+  
+  
+</body>
+</html>

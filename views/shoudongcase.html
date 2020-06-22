@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+		<script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+		<title></title>
+	</head>
+	<script type="text/javascript">
+		var nowtime = Math.round(new Date() / 1000)
+		var casenum ="<div align='center'><strong><span>案件编号</span></strong></div>"
+		var zdstate ="<div align='center'><strong><span>自动流程状态</span></strong></div>"
+		var expectendtime ="<div align='center'><strong><span>部门自动回复时间</span></strong></div>"
+		var sdtime = "<div align='center'><strong><span>手动操作时间</span></strong></div>"
+		var nbstate ="<div align='center'><strong><span>宁波系统状态</span></strong></div>"
+		var isManual ="<div align='center'><strong><span>操作</span></strong></div>"
+		var caozuoren = "<div align='center'><strong><span>操作人</span></strong></div>"
+		let casestate = '初始化'
+		function getnewstr(str,char){
+			var num = str.lastIndexOf(char)
+			var newstr = str.substring(num)
+			return newstr
+		}
+		function timestampToTime(timestamp) {
+		        var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+		        Y = date.getFullYear() + '-';
+		        M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+				D = date.getDate()
+		        h = date.getHours() 
+		        m = date.getMinutes() 
+		        s = date.getSeconds()
+				if (D >= 0 && D <= 9) {
+					D = "0" + D;
+				}
+				if (h >= 0 && h <= 9) {
+					h = "0" + h;
+				}
+				if (m >= 0 && m <= 9) {
+					m = "0" + m;
+				}
+				if (s >= 0 && s <= 9) {
+					s = "0" + s;
+				}
+				
+		        return Y+M+D+ ' '+h+':'+m+':'+s;
+		}
+	//进页面自动获取
+	$(document).ready(function(){
+		$.ajax({
+			type:"get",
+			url:"/shoudongcasestateQuerycount",
+			dataType:"json",
+			success:function(data){
+				var x = data
+				x = JSON.stringify(x)
+				var a = x.match(/\d+/);
+				$("#datasnum").html(a);
+				var b = Math.ceil(a / 10)
+				if(b == 0){
+									  b = 1
+				}
+				$("#totalpage").html(b);
+				totalpage = b ;
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+		$.ajax({
+			type:"get",
+			url:"/shoudongcasestateQuery",
+			dataType:"json",
+			success:function(data){
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td >' + casenum+ '</td>'
+				strHtml += '<td >' + zdstate+ '</td>'
+				strHtml += '<td >' + nbstate+ '</td>'
+				strHtml += '<td >' + sdtime+ '</td>'
+				strHtml += '<td >' + caozuoren+ '</td>'
+				strHtml += '<td >' + isManual+ '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let person = item.person
+					let shoudongtime = item.shoudongtime
+					shoudongtime = timestampToTime(shoudongtime)	
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ shoudongtime + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ person + '</span></div></td>';
+					strHtml += '<td><div align="center">'+chaxun + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error:function(error){}
+		})
+	})
+//查询
+$(document).ready(function(){
+	$("#query").click(function(){
+		$.ajax({
+			type:"post",
+			url:"/shoudongcasestateQueryClickcount",
+			dataType:"json",
+			data:{
+				tasknum:$("#tasknum").val(),
+			},
+			success:function(data){
+				var x = data
+				x = JSON.stringify(x)
+				var a = x.match(/\d+/);
+				if (a == 0) {
+				    alert("没有相关数据")
+				    window.location.reload();
+				}
+				else{
+				  $("#datasnum").html(a);
+				  var b = Math.ceil(a / 20)
+				  if(b == 0){
+					  b = 1
+				  }
+				  $("#totalpage").html(b);
+				  totalpage = b ;
+				}
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+		$.ajax({
+			type:"post",
+			url:"/shoudongcasestateQueryClick",
+			dataType:"json",
+			data:{
+				tasknum:$("#tasknum").val(),
+			},
+			success:function(data){
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td >' + casenum+ '</td>'
+				strHtml += '<td >' + zdstate+ '</td>'
+				strHtml += '<td >' + nbstate+ '</td>'
+				strHtml += '<td >' + isManual+ '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+					strHtml += '<td><div align="center">'+chaxun + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error:function(error){
+				console.log(error)
+			}
+		})
+	})
+})
+//上一页
+var gotolastpage = function() {
+  var pageid = $("#pageid").html()
+  var tp = pageid -2
+  if (pageid == 1) {
+    alert("当前是第一页！")
+  } 
+  else {
+    let nextpageid = Number(pageid);
+    var newpageid = nextpageid -1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/shoudongoto",
+		dataType: "json",
+		data: {
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let arr = data
+			var strHtml = '';
+			strHtml += '<tr>';
+			strHtml += '<td >' + casenum+ '</td>'
+			strHtml += '<td >' + zdstate+ '</td>'
+			strHtml += '<td >' + nbstate+ '</td>'
+			strHtml += '<td >' + isManual+ '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+			    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+				strHtml += '<td><div align="center">'+chaxun + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  }
+}
+//下一页
+var gotonextpage = function() {
+  var pageid = $("#pageid").html()
+  var tp = pageid 
+  var zongpageid = $("#totalpage").html()
+  if (pageid == zongpageid) {
+    alert("当前是最后一页！")
+  }
+  else {
+    let nextpageid = Number(pageid);
+    var newpageid = nextpageid +1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/shoudongoto",
+		dataType: "json",
+		data: {
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let arr = data
+			var strHtml = '';
+			strHtml += '<tr>';
+			strHtml += '<td >' + casenum+ '</td>'
+			strHtml += '<td >' + zdstate+ '</td>'
+			strHtml += '<td >' + nbstate+ '</td>'
+			strHtml += '<td >' + isManual+ '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+			    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+				strHtml += '<td><div align="center">'+chaxun + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  }
+}
+//首页
+var gotofirstpage = function() {
+	var tp = 0
+    var newpageid = 1 ;
+    $("#pageid").html(newpageid)
+    $.ajax({
+		type: "post",
+		url: "/shoudongoto",
+		dataType: "json",
+		data: {
+			tp: tp,
+			tasknum:$("#tasknum").val(),
+		},
+		success: function(data) {
+			let arr = data
+			var strHtml = '';
+			strHtml += '<tr>';
+			strHtml += '<td >' + casenum+ '</td>'
+			strHtml += '<td >' + zdstate+ '</td>'
+			strHtml += '<td >' + nbstate+ '</td>'
+			strHtml += '<td >' + isManual+ '</td>'
+			strHtml += '</tr>';
+			//td
+			for (var i = 0; i < arr.length; i++) {
+			    var item = arr[i];
+			    strHtml += '<tr>';
+				let nextpartstart
+				let querytasknum  = item.tasknum
+			    let state = item.state
+				let nextpartstartstamp = item.nextpartstart
+				let endtimehalfstamp = item.endtimehalf
+				let isnormal = item.isnormal
+				let isnow = item.isnow
+			    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+				strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+				var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+			    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+				strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+				strHtml += '<td><div align="center">'+chaxun + '</div></td>';
+				strHtml += '</tr>';
+			}
+			$('#tab').html(strHtml);
+		},
+		error: function(err) {
+			console.log('异常');
+		}
+	})
+  
+}
+//跳转
+var gotojump = function() {
+	var newpageid = $("#tiaozhuanid").val()
+	if (newpageid > totalpage || Number(newpageid) < 1) {
+	  alert("请输入正确的页数")
+	} else {
+		var tp = Number(newpageid)-1
+		$("#pageid").html(newpageid)
+		$.ajax({
+			type: "post",
+			url: "/shoudonggoto",
+			dataType: "json",
+			data: {
+				tp: tp,
+				tasknum:$("#tasknum").val(),
+			},
+			success: function(data) {
+				let arr = data
+				var strHtml = '';
+				strHtml += '<tr>';
+				strHtml += '<td >' + casenum+ '</td>'
+				strHtml += '<td >' + zdstate+ '</td>'
+				strHtml += '<td >' + nbstate+ '</td>'
+				strHtml += '<td >' + isManual+ '</td>'
+				strHtml += '</tr>';
+				//td
+				for (var i = 0; i < arr.length; i++) {
+				    var item = arr[i];
+				    strHtml += '<tr>';
+					let nextpartstart
+					let querytasknum  = item.tasknum
+				    let state = item.state
+					let nextpartstartstamp = item.nextpartstart
+					let endtimehalfstamp = item.endtimehalf
+					let isnormal = item.isnormal
+					let isnow = item.isnow
+				    strHtml += '<td><div align="center"><span>'+ querytasknum + '</span></div></td>';
+					strHtml += '<td><div align="center"><span>'+ state + '</span></div></td>';
+					var shoudong  ="<a href='javascript:void(0);' onclick='shoudong(" + querytasknum + ")' ><button  id='xx1'>手动</button></a>"
+				    var chaxun  ="<a href='javascript:void(0);' onclick='getdetail(" + querytasknum + ")' ><button  id='xx1'>查询</button></a>"
+					strHtml += '<td><div align="center" style=padding-bottom:2px><span id = '+querytasknum+'>等待查询</span></div></td>';
+					strHtml += '<td><div align="center">&nbsp;&nbsp;'+chaxun + '</div></td>';
+					strHtml += '</tr>';
+				}
+				$('#tab').html(strHtml);
+			},
+			error: function(err) {
+				console.log('异常');
+			}
+		})
+	}
+}
+function getstep(arr,querytasknum){
+	let step1 = "在区受理阶段登记案件"
+	let step2 = "在区受理阶段批转区派遣"
+	let step3 = "在区派遣阶段批转区直部门"
+	let step4 = "在区直部门阶段批转区核查结案"
+	let step5 = "在区核查结案阶段发送核查发送核查"
+	let step6 = "在区核查结案阶段核查反馈"
+	let step7 = "在区核查结案阶段批转市结案审核"
+	let step8 = "在市结案审核阶段结案"
+	let step9 = "在市不立案审核阶段作废"
+	if(arr.indexOf(step8) !== -1){
+		$("#"+querytasknum).html('已结案')
+	}else if(arr.indexOf(step7) !== -1){
+		$("#"+querytasknum).html('核查信息已通过，进入结案阶段')
+	}else if(arr.indexOf(step6) !== -1){
+		$("#"+querytasknum).html('核查反馈已处理')
+	}else if(arr.indexOf(step5) !== -1){
+		$("#"+querytasknum).html('已发送核查信息')
+	}else if(arr.indexOf(step4) !== -1){
+		$("#"+querytasknum).html('部门回复已完成')
+	}else if(arr.indexOf(step3) !== -1){
+		$("#"+querytasknum).html('已批转，等待部门回复')
+	}else if(arr.indexOf(step2) !== -1){
+		$("#"+querytasknum).html('已选择立案')
+	}else if(arr.indexOf(step1) !== -1){
+		$("#"+querytasknum).html('已加入数据库')
+	}else if(arr.indexOf(step9) !== -1){
+		$("#"+querytasknum).html('作废')
+	}else{
+		$("#"+querytasknum).html('<b>其他状态，需要查询确认<b>')
+	}
+}
+function getdetail(querytasknum){
+	$.ajax({
+		type: "get",
+		//url: "//172.19.48.181:3000/detail/" + aa,
+		url: "//172.19.48.181:3000/detail/"+querytasknum,
+		async: false,
+		dataType: "json",
+		success:function(data){
+			//console.log(data)
+			let a = 2020
+			let arr = data.case[0].processInfo
+			let newarr = getnewstr(arr,a)
+			getstep(newarr,querytasknum)
+		},
+		error:function(error){
+			console.log(error)
+		}
+	}) 
+}
+	
+		
+	
+</script>
+<body>
+<style type="text/css">
+  .red{
+    color: red;
+  }
+
+  .jiacu{
+    font-weight:bold;
+  }
+#tab tr:hover{
+	background-color:gainsboro; 
+}
+  a{ text-decoration:none} 
+
+</style>
+<!-- 导航条 -->
+<div id="" class="navbar-collapse collapse" style="text-align: center;">
+<ul class="nav nav-pills" style="display: inline-block;float: none;" >
+  <li><a href="caseStatus">未完结案件</a></li>
+  <li><a href="endcase">已完结案件</a></li>
+  <li class="active"><a href="shoudongcase">手动干预案件</a></li>
+</ul>
+</div>
+
+<!-- 数据表格 -->
+<div align="center" style="margin-top:10px" >
+    <table  style="border-radius: 25px;" >
+      <tr>
+        <td width="300" align="center" >
+			<div class="input-group" >
+			    <input type="text" id="tasknum" class="form-control" placeholder="输入需要查找的案件编号" >
+			    <span class="input-group-btn">
+					<button class="btn btn-default" type="button" id="query">Go</button>
+			    </span>
+			</div><!-- /input-group -->
+        </td>
+      </tr>
+    </table>
+  </div>
+<div align="center" >
+	<table   id="tab" class="table table-striped" style="margin-top: 20px;padding:20px;table-layout: fixed; width: 800px;" ></table>
+</div>
+<!-- 底部跳转 -->
+	<table id="foot" align="center" >
+		<tr>
+			<td>     
+				<p class="underlinesed"></p>
+				<span>共 <span id="datasnum" class="jiacu"></span> 条记录</span>
+				<a href="javascript:gotofirstpage()" class="firstpage">首页 </a>
+				<a href="javascript:gotolastpage()" class="lastpage">上一页</a>
+				<a href="javascript:gotonextpage()" class="nextpage">下一页</a>
+				<span>页次: <span class="red" id="pageid">1</span>/
+				<span class="jiacu" id="totalpage"></span>
+				<span class="jiacu">&nbsp;10</span>&nbsp;条&nbsp;记录每页<span></span>
+				<span>跳转到：</span><input type="text" style="width: 25px" id="tiaozhuanid"> 
+				<a href="javascript:gotojump()" class="goto">&nbsp;跳转</a>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
