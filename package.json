@@ -9,7 +9,7 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "async": "^3.1.0",
+        "async": "^3.2.2",
         "async-series": "0.0.1",
         "busboy": "^0.3.1",
         "cheerio": "^1.0.0-rc.3",
